@@ -6,10 +6,8 @@ import {
     IndexFilters,
     useSetIndexFiltersMode,
     useIndexResourceState,
-    Text,
     ChoiceList,
     Badge,
-    Page,
     HorizontalStack,
     Pagination,
     Box,
@@ -43,7 +41,9 @@ import {
     
     const {mode, setMode} = useSetIndexFiltersMode();
     const [orderStatus, setorderStatus] = useState([]);
-    const [Date, setDate] = useState();
+    const [Date, setDate] = useState('');
+    const [StartDate, setStartDate] = useState('');
+    const [EndDate, setEndDate ]= useState('');
     const [queryValue, setQueryValue] = useState('');
     
     const handleorderStatusChange = useCallback((value) => setorderStatus(value),[],);
@@ -61,10 +61,21 @@ import {
       handleDateRemove,
       handleQueryValueRemove,
     ]);
+
+    const handleStartDateChange = useCallback(
+      (newValue) => setStartDate(newValue),
+      [],
+    );
+
+    const handleEndDateChange = useCallback(
+      (newValue) => setEndDate(newValue),
+      [],
+    );
   
-    const showData = async ()=>{
-      setLoading(true);
+    const showData = ()=>{
       
+      setLoading(true);
+      console.log(Date[0])
       let filterdata;
       
       if(selected!== 0 ){
@@ -77,21 +88,17 @@ import {
         filterdata = []
       }
 
-      console.log(Date)
-      console.log(selected)
-      let dateFilter= Date[0]
-      console.log(dateFilter)
       const postData = {
 
         type : filterdata,
         date: Date[0],
-        start_date: "",
-        end_date: "",
+        start_date: StartDate,
+        end_date: EndDate,
         keyword: ""
       }
       
       axios.post( getOrdersApi, postData)
-      .then(async (response) => {
+      .then( (response) => {
         setData(response.data)
         console.log(response.data);
         setLoading(false)
@@ -101,13 +108,14 @@ import {
 
     useEffect( () =>{
       showData();
-    },[orderStatus, selected, Date])
+    },[orderStatus, selected, Date, StartDate, EndDate])
   
     const filters = [
       {
         key: 'orderStatus',
         label: 'Order status',
         filter: (
+          
           <ChoiceList
             title="Account status"
             titleHidden
@@ -124,7 +132,8 @@ import {
             selected={orderStatus || []}
             onChange={handleorderStatusChange}      
             allowMultiple
-          />
+            />
+          
         ),
         shortcut: true,
       },
@@ -132,11 +141,12 @@ import {
         key: 'Date',
         label: 'Date',
         filter: (
+          <>
           <ChoiceList
             title="Date"
             titleHidden
             choices={[
-               
+              
               {label: 'Today', value: 'today'},
               {label: 'Last 7 Days', value: '7d'},
               {label: 'Last 30 Days', value: '30d'},
@@ -146,9 +156,31 @@ import {
             ]}
             selected={Date || ''}
             onChange={handleDateChange}      
-          />
-        ),
-        shortcut: true,
+            />
+            
+            {
+              Date[0] === 'custom' ? 
+              <>
+                <TextField
+                  label="Starting"
+                  type="date"
+                  value={StartDate}
+                  onChange={handleStartDateChange}
+                  autoComplete="off" 
+                />
+                <TextField
+                  label="Ending"
+                  type="date"
+                  value={EndDate}
+                  onChange={handleEndDateChange}
+                  autoComplete="off"
+                />
+              </>
+                : null
+            }  
+          </>
+          ),
+          shortcut: true,
       },      
     ];
     const appliedFilters = [];
@@ -216,7 +248,7 @@ import {
     return (
       <>
         
-      {/* <LegacyCard>
+      <LegacyCard>
         <IndexFilters
           queryValue={queryValue}
           queryPlaceholder="Searching in all"
@@ -283,14 +315,7 @@ import {
           }}
           />
         </HorizontalStack>
-      </Box> */}
-      <TextField
-      label="Quantity"
-      type="date"
-      value={Date}
-      onChange={Data}
-      autoComplete="off"
-    />
+      </Box>
     </>
     );
   

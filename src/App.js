@@ -1,4 +1,4 @@
-import GetOrders from "./pages/getOrders";
+import GetOrders from "./pages/ordersList";
 export default function App() {
   return (
     <GetOrders />

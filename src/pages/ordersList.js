@@ -83,7 +83,7 @@ import {
       if(selected!== 0 && orderStatus.length === 0 ){
         filterdata = [itemStrings[selected]]
       }
-      else if(selected!== 0 && orderStatus.length !== 0){
+      else if((selected!== 0 || selected === 0)  && orderStatus.length !== 0){
         filterdata = orderStatus
       }
       else{

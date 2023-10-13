@@ -288,35 +288,12 @@ import {
         if(orderStatus.length > 1){
           bulkActions.splice(3, 3);
           return bulkActions;
-        }
-        if(orderStatus[0] === 'pending' || orderStatus[0] === 'Approved' || orderStatus[0] === 'Disapproved') return bulkActions;
-
-        if(orderStatus[0] === 'Print Queue') return bulkActions.slice(1);
-        if(orderStatus[0] === 'printed') return bulkActions.slice(2);
-        if(orderStatus[0] === 'dispatched') return bulkActions.slice(3);
-        if(orderStatus[0] === 'On Hold') return bulkActions.slice(4);
-        if(orderStatus[0] === 'cancelled') return bulkActions.slice(5);
-
-        /*
-        const obj = {
-          'Print Queue': 1,
-          'printed': 2,
-          'dispatched': 3,
-          'On Hold': 4,
-          'cancelled': 5
-        };
-        return bulkActions.slice(obj[orderStatus[0]]);
-        */
-
-
-        /*
+        }        
+        if(orderStatus[0] === 'Ready For Collection' || orderStatus[0] === 'Refunded' ) return [];
+        
         const arr = ['Print Queue', 'printed', 'dispatched', 'On Hold', 'cancelled'];
         return bulkActions.slice(arr.indexOf(orderStatus[0]) + 1);
-        */
 
-
-
-        if(orderStatus[0] === 'Ready For Collection' || orderStatus[0] === 'Refunded' ) return [];
       } else {
         if(selected === 0){
           bulkActions.splice(3, 3);

@@ -1,6 +1,5 @@
 import React from 'react';
 import {useState, useEffect, useCallback} from 'react';
-import { Link } from 'react-router-dom';
 import {
     IndexTable,
     LegacyCard,
@@ -14,38 +13,38 @@ import {
     Box,
     Spinner,
     TextField,
-    Card,
-    
   } from '@shopify/polaris';
   import axios from 'axios';
   import {getOrdersApi} from '../endpoints'
   function GetOrders() {
     const [selected, setSelected] = useState(0);
-    const [num, setnum] = useState();
-    const [Data, setData] = useState("");
-    const [loading, setLoading] = useState(true)
-    
+    const [currentPage, setCurrentPage] = useState(1);
+    const [ordersData, setOrdersData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [hasPrevious, setHasPrevious] = useState(false);
+    const [hasNext, setHasNext] = useState(false);
+
     const {mode, setMode} = useSetIndexFiltersMode();
-    const [orderStatus, setorderStatus] = useState([]);
-    const [Date, setDate] = useState('');
-    const [StartDate, setStartDate] = useState('');
-    const [EndDate, setEndDate ]= useState('');
+    const [orderStatus, setOrderStatus] = useState([]);
+    const [dateFilter, setDateFilter] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate ]= useState('');
     const [queryValue, setQueryValue] = useState('');
 
-    const {selectedResources, allResourcesSelected, handleSelectionChange} = useIndexResourceState(Data?.orders?.data);
+    const {selectedResources, allResourcesSelected, handleSelectionChange} = useIndexResourceState(ordersData);
     
-    const handleorderStatusChange = useCallback((value) => setorderStatus(value),[],);
-    const handleDateChange = useCallback((value) => setDate(value),[],);
+    const handleOrderStatusChange = useCallback((value) => setOrderStatus(value),[],);
+    const handleDateChange = useCallback((value) => setDateFilter(value),[],);
     const handleFiltersQueryChange = useCallback((value) => setQueryValue(value),[],);
-    const handleorderStatusRemove = useCallback(() => setorderStatus([]),[],);
-    const handleDateRemove = useCallback(() => setDate(''),[],);
+    const handleOrderStatusRemove = useCallback(() => setOrderStatus([]),[],);
+    const handleDateRemove = useCallback(() => setDateFilter(''),[],);
     const handleQueryValueRemove = useCallback(() => setQueryValue(''), []);
     const handleFiltersClearAll = useCallback(() => {
       handleDateRemove();
-      handleorderStatusRemove();
+      handleOrderStatusRemove();
       handleQueryValueRemove();
     }, [
-      handleorderStatusRemove,
+      handleOrderStatusRemove,
       handleDateRemove,
       handleQueryValueRemove,
     ]);
@@ -78,36 +77,42 @@ import {
     }));
         
     
-    const showData = ()=>{ 
+    const showData = () => {
       setLoading(true);    
       let filterdata;
       if(selected!== 0 && orderStatus.length === 0 ){
         filterdata = [itemStrings[selected]]
       }
-      else if( selected!== 0 && orderStatus.length !== 0){
+      else if(selected!== 0 && orderStatus.length !== 0){
         filterdata = orderStatus
       }
       else{
         filterdata = []
       }
       const postData = {
-        type : filterdata,
-        date: Date[0],
-        start_date: StartDate,
-        end_date: EndDate,
+        type : filterdata, // [""]
+        date: dateFilter[0],
+        start_date: startDate,
+        end_date: endDate,
         keyword: ""
       }
-      axios.post( getOrdersApi, postData)
-      .then( (response) => {
-        setData(response.data)
-        setLoading(false)
+      axios.post( getOrdersApi(currentPage), postData)
+      .then( (res) => {
+        if(res.status === 200){
+          setLoading(false)
+          const { orders } = res.data;
+          const {last_page, current_page, data } = orders;
+          setOrdersData(data);
+          setHasPrevious(current_page > 1);
+          setHasNext(last_page > current_page);
+        }
       })
       .catch(err => console.log(err));
     }
 
     useEffect( () =>{
       showData();
-    },[orderStatus, selected, Date, StartDate, EndDate])
+    },[orderStatus, selected, dateFilter, startDate, endDate, currentPage])
   
     const filters = [
       {
@@ -128,19 +133,19 @@ import {
               {label: 'Ready For Collection', value: 'Ready For Collection'},
             ]}
             selected={orderStatus || []}
-            onChange={handleorderStatusChange}      
+            onChange={handleOrderStatusChange}      
             allowMultiple
             />
         ),
         shortcut: true,
       },
       {
-        key: 'Date',
-        label: 'Date',
+        key: 'dateFilter',
+        label: 'dateFilter',
         filter: (
           <>
           <ChoiceList
-            title="Date"
+            title="dateFilter"
             titleHidden
             choices={[     
               {label: 'Today', value: 'today'},
@@ -150,23 +155,23 @@ import {
               {label: 'Last 12 months', value: '12m'},
               {label: 'Custom', value: 'custom'},
             ]}
-            selected={Date}
+            selected={dateFilter}
             onChange={handleDateChange}      
             />
             {
-              Date[0] === 'custom' ? 
+              dateFilter[0] === 'custom' ? 
               <>
                 <TextField
                   label="Starting"
                   type="date"
-                  value={StartDate}
+                  value={startDate}
                   onChange={handleStartDateChange}
                   autoComplete="off" 
                 />
                 <TextField
                   label="Ending"
                   type="date"
-                  value={EndDate}
+                  value={endDate}
                   onChange={handleEndDateChange}
                   autoComplete="off"
                 />
@@ -184,14 +189,14 @@ import {
       appliedFilters.push({
         key,
         label: disambiguateLabel(key, orderStatus),
-        onRemove: handleorderStatusRemove,
+        onRemove: handleOrderStatusRemove,
       });
     }
-    if (Date && !isEmpty(Date)) {
-      const key = 'Date';
+    if (dateFilter && !isEmpty(dateFilter)) {
+      const key = 'dateFilter';
       appliedFilters.push({
         key,
-        label: disambiguateLabel(key, Date),
+        label: disambiguateLabel(key, dateFilter),
         onRemove: handleDateRemove,
       });
     }
@@ -202,7 +207,7 @@ import {
     };
 
       
-    let rowMarkup = Data?.orders?.data?.map(
+    let rowMarkup = ordersData?.map(
       (
         {id, shopify_order_number, created_at, customer, price, sheets_download_status, quantity_of_sheets, order_status, has_low_dpi},
         index,
@@ -221,11 +226,9 @@ import {
             <IndexTable.Cell>{customer?.name}</IndexTable.Cell>
             <IndexTable.Cell>{price}</IndexTable.Cell>
             <IndexTable.Cell>{
-              
               sheets_download_status === 'Ready For Download' ? 
               <Badge status='success'> { sheets_download_status } </Badge> :
               <Badge status="Attention">{ sheets_download_status } </Badge>
-              
             }
             </IndexTable.Cell>
             <IndexTable.Cell>{quantity_of_sheets}</IndexTable.Cell>
@@ -248,7 +251,8 @@ import {
         onAction: () => console.log('Todo: implement bulk edit'),
       },
     ];
-    const bulkActions = [
+
+    let bulkActions = [
       {
         content: 'Print Queue',
         onAction: () => console.log('Todo: implement bulk add tags'),
@@ -279,80 +283,52 @@ import {
       },
     ];
 
-    const filterActions = (value1, value2)=>{
-      if(value1 === 'All' ){
-        if(value2[0] === 'pending'){
-          return bulkActions
-        }
-        else if(value2[0] === 'Print Queue'){
-          const indexesToAccess = [1,2,3,4,5,6];
-          return indexesToAccess.map((index) => bulkActions[index]);
-        }
-        else if(value2[0] === 'Printed'){
-          const indexesToAccess = [2,3,4,5,6];
-          return indexesToAccess.map((index) => bulkActions[index]);
-        }
-        else if(value2[0] === 'dispatched'){
-          const indexesToAccess = [3,4,5,6];
-          return indexesToAccess.map((index) => bulkActions[index]);
-        }
-        else if(value2[0] === 'On Hold'){
-          const indexesToAccess = [4,5,6];
-          return indexesToAccess.map((index) => bulkActions[index]);
-        }
-        else if(value2[0] === 'cancelled'){
-          const indexesToAccess = [5,6];
-          return indexesToAccess.map((index) => bulkActions[index]);
-        }
-        else{
-          const indexesToAccess = [0,1,2,6];
-          return indexesToAccess.map((index) => bulkActions[index]);
-        }
-      }
-
-
-      if(value1 === 'Pending' || value1 === 'Approved' || value1 === 'Disapproved'){
-        if(value2[0] === 'pending'){
-          return bulkActions
-        }
-        else if(value2[0] === 'Print Queue'){
-          const indexesToAccess = [1,2,3,4,5,6];
-          return indexesToAccess.map((index) => bulkActions[index]);
-        }
-        else if(value2[0] === 'Printed'){
-          const indexesToAccess = [2,3,4,5,6];
-          return indexesToAccess.map((index) => bulkActions[index]);
-        }
-        else if(value2[0] === 'dispatched'){
-          const indexesToAccess = [3,4,5,6];
-          return indexesToAccess.map((index) => bulkActions[index]);
-        }
-        else if(value2[0] === 'On Hold'){
-          const indexesToAccess = [4,5,6];
-          return indexesToAccess.map((index) => bulkActions[index]);
-        }
-        else if(value2[0] === 'cancelled'){
-          const indexesToAccess = [5,6];
-          return indexesToAccess.map((index) => bulkActions[index]);
-        }
-        else{
+    const filterActions = () => { // 83 + 30
+      if(orderStatus.length > 0){
+        if(orderStatus.length > 1){
+          bulkActions.splice(3, 3);
           return bulkActions;
         }
-      }
+        if(orderStatus[0] === 'pending' || orderStatus[0] === 'Approved' || orderStatus[0] === 'Disapproved') return bulkActions;
 
-      if(value1 === 'Resubmitted'){
-        const indexesToAccess = [1,2,3,4,5,6];
-         return indexesToAccess.map((index) => bulkActions[index]);
-      }
+        if(orderStatus[0] === 'Print Queue') return bulkActions.slice(1);
+        if(orderStatus[0] === 'printed') return bulkActions.slice(2);
+        if(orderStatus[0] === 'dispatched') return bulkActions.slice(3);
+        if(orderStatus[0] === 'On Hold') return bulkActions.slice(4);
+        if(orderStatus[0] === 'cancelled') return bulkActions.slice(5);
 
-      if(value2.length > 0){
-          const indexesToAccess = [0,1,2,6];
-          return indexesToAccess.map((index) => bulkActions[index]);
+        /*
+        const obj = {
+          'Print Queue': 1,
+          'printed': 2,
+          'dispatched': 3,
+          'On Hold': 4,
+          'cancelled': 5
+        };
+        return bulkActions.slice(obj[orderStatus[0]]);
+        */
+
+
+        /*
+        const arr = ['Print Queue', 'printed', 'dispatched', 'On Hold', 'cancelled'];
+        return bulkActions.slice(arr.indexOf(orderStatus[0]) + 1);
+        */
+
+
+
+        if(orderStatus[0] === 'Ready For Collection' || orderStatus[0] === 'Refunded' ) return [];
+      } else {
+        if(selected === 0){
+          bulkActions.splice(3, 3);
+          return bulkActions;
+        }
+        if(itemStrings[selected] === 'Pending' || itemStrings[selected] === 'Approved' || itemStrings[selected] === 'Disapproved') return bulkActions;
+        if(selected === 4) return bulkActions.slice(2);
       }
     }
+
     return (
       <>
-        
       <LegacyCard>
         <IndexFilters
           queryValue={queryValue}
@@ -385,14 +361,14 @@ import {
         :
         <IndexTable
         resourceName={resourceName}
-        itemCount={Data.orders?.data?.length || 1}
+        itemCount={ordersData.length || 1}
         selectedItemsCount={
             allResourcesSelected ? 'All' : selectedResources.length
           }
           onSelectionChange={handleSelectionChange}
           headings={[
             {title: 'Order'},
-            {title: 'Date'},
+            {title: 'dateFilter'},
             {title: 'Customer'},
             {title: 'Price'},
             {title: 'Sheet Generation Status'},
@@ -403,7 +379,7 @@ import {
 
           promotedBulkActions={promotedBulkActions}
           bulkActions={
-            filterActions(itemStrings[selected], orderStatus)          
+            filterActions()
           }
           >
           {rowMarkup}
@@ -413,15 +389,13 @@ import {
       <Box style={{marginTop:'20px'}}>
         <HorizontalStack align='center'>
         <Pagination
-          hasPrevious = {Data?.data?.current_page > 1}
+          hasPrevious = {hasPrevious}
           onPrevious={() => {
-            Data?.data?.current_page > 1 && 
-            setnum(Data?.data?.current_page-1)
+            setCurrentPage(currentPage-1)
           }}
-          hasNext={Data?.data?.last_page > Data?.data?.current_page}
+          hasNext={hasNext}
           onNext={() => {
-            Data?.data?.last_page > Data?.data?.current_page && 
-            setnum(Data?.data?.current_page+1) 
+            setCurrentPage(currentPage + 1)
           }}
           />
         </HorizontalStack>
@@ -433,7 +407,7 @@ import {
       switch (key) {
         case 'orderStatus':
           return (value).map((val) => `Customer ${val}`).join(', ');
-        case 'Date':
+        case 'dateFilter':
           return (value).map((val) => `Customer ${val}`).join(', ');  
         default:
           return value ;

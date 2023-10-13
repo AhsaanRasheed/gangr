@@ -81,10 +81,10 @@ import {
     const showData = ()=>{ 
       setLoading(true);    
       let filterdata;
-      if(selected!== 0 ){
+      if(selected!== 0 && orderStatus.length === 0 ){
         filterdata = [itemStrings[selected]]
       }
-      else if(orderStatus.length !== 0){
+      else if( selected!== 0 && orderStatus.length !== 0){
         filterdata = orderStatus
       }
       else{
